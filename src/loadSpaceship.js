@@ -22,10 +22,13 @@ export function loadSpaceship(scene, camera, onLoad) {
       // Move ship to center
       ship.position.sub(center);
 
-      // Scale it to a consistent size
+      // Scale to consistent size
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scaleFactor = 5 / maxDim; // make it roughly size 5
+      const scaleFactor = 8 / maxDim; // bigger
       ship.scale.setScalar(scaleFactor);
+
+      // Rotate so it faces forward (away from camera)
+      ship.rotation.y = Math.PI; // 180 degrees
 
       // Move ship in front of camera
       ship.position.z = -20;

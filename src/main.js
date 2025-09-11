@@ -19,7 +19,9 @@ function init() {
     0.1,
     5000
   );
-  camera.position.set(0, 0, 10);
+  // Start behind & above
+  camera.position.set(0, 5, 30);
+  camera.lookAt(0, 0, 0);
 
   // === RENDERER ===
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -65,13 +67,20 @@ function init() {
     startBtn.addEventListener("click", () => {
       console.log("🎬 Start button clicked!");
       gsap.to(camera.position, {
-        z: 0,
+        x: 0,
+        y: 3,
+        z: 20, // keep behind the ship, not inside
         duration: 2,
-        ease: "power3.in",
+        ease: "power3.inOut",
+        onUpdate: () => {
+          camera.lookAt(0, 0, 0);
+        },
         onComplete: () => {
           console.log("🚀 Loading spaceship...");
           loadSpaceship(scene, camera, (ship) => {
             spaceship = ship;
+            // Extra scale boost here if needed
+            spaceship.scale.multiplyScalar(1.5);
           });
         },
       });
@@ -93,14 +102,29 @@ function onWindowResize() {
 function animate() {
   requestAnimationFrame(animate);
 
-  // Move stars to simulate forward motion
+  // Move stars backward
   stars.position.z += 5;
   if (stars.position.z > 1000) stars.position.z = 0;
 
-  // Rotate spaceship slowly
+  // Keep spaceship steady
   if (spaceship) {
-    spaceship.rotation.y += 0.01;
-    spaceship.position.y = -1 + Math.sin(Date.now() * 0.002) * 0.2; // hover effect
+    spaceship.rotation.set(0, 0, 0);
+    spaceship.position.set(0, -1 + Math.sin(Date.now() * 0.002) * 0.2, 0);
+
+    // Camera follows closer to ship
+    camera.position.lerp(
+      new THREE.Vector3(
+        spaceship.position.x,
+        spaceship.position.y + 3,
+        spaceship.position.z + 12 // closer POV
+      ),
+      0.05 // smoothness
+    );
+
+    // Look slightly ahead, not just at ship
+    const lookAtTarget = spaceship.position.clone();
+    lookAtTarget.z -= 20;
+    camera.lookAt(lookAtTarget);
   }
 
   composer.render();
