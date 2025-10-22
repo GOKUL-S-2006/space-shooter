@@ -4,8 +4,16 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { gsap } from "gsap";
 import { loadSpaceship } from "./loadSpaceship.js";
+import { startGame, updateGame, resetGame } from "./game.js";
 
 let scene, camera, renderer, composer, stars, spaceship;
+let gameState = "menu"; // 'menu', 'playing', 'gameover'
+
+// UI Elements
+const startBtn = document.getElementById("startBtn");
+const scoreEl = document.getElementById("score");
+const gameOverEl = document.getElementById("gameOver");
+const restartBtn = document.getElementById("restartBtn");
 
 function init() {
   // === SCENE ===
@@ -19,7 +27,7 @@ function init() {
     0.1,
     5000
   );
-  camera.position.set(0, 0, 10);
+  camera.position.set(0, 0, 10); // Start camera at menu position
 
   // === RENDERER ===
   renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -29,18 +37,20 @@ function init() {
   // === POSTPROCESSING ===
   composer = new EffectComposer(renderer);
   composer.addPass(new RenderPass(scene, camera));
-  composer.addPass(
-    new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      1.5,
-      0.4,
-      0.85
-    )
+  const bloomPass = new UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight),
+    1.2, // strength
+    0.4, // radius
+    0.85 // threshold
   );
+  composer.addPass(bloomPass);
 
   // === LIGHTING ===
   const ambient = new THREE.AmbientLight(0xffffff, 1);
   scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 2);
+  dirLight.position.set(5, 10, 7.5);
+  scene.add(dirLight);
 
   // === STARS ===
   const starGeo = new THREE.BufferGeometry();
@@ -59,28 +69,42 @@ function init() {
   stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
 
-  // === START BUTTON ===
-  const startBtn = document.getElementById("startBtn");
-  if (startBtn) {
-    startBtn.addEventListener("click", () => {
-      console.log("🎬 Start button clicked!");
-      gsap.to(camera.position, {
-        z: 0,
-        duration: 2,
-        ease: "power3.in",
-        onComplete: () => {
-          console.log("🚀 Loading spaceship...");
-          loadSpaceship(scene, camera, (ship) => {
-            spaceship = ship;
-          });
-        },
-      });
+  // === LOAD SPACESHIP ===
+  // Load the ship immediately for the menu
+  loadSpaceship(scene, camera, (ship) => {
+    spaceship = ship;
+  });
 
-      gsap.to(startBtn, { opacity: 0, scale: 0.5, duration: 1 });
-    });
-  }
-
+  // === EVENT LISTENERS ===
+  startBtn.addEventListener("click", onStartClick);
+  restartBtn.addEventListener("click", onRestartClick);
   window.addEventListener("resize", onWindowResize);
+}
+
+function onStartClick() {
+  console.log("🎬 Start button clicked!");
+  gameState = "playing";
+
+  // Hide button
+  gsap.to(startBtn, { opacity: 0, scale: 0.5, duration: 1, onComplete: () => startBtn.classList.add('hidden') });
+
+  // Show score
+  scoreEl.style.opacity = 1;
+
+  // Start the game logic
+  startGame(spaceship, scene, camera);
+}
+
+function onRestartClick() {
+  console.log("🔄 Restarting game...");
+  gameOverEl.classList.add("hidden");
+  
+  // Reset game state and UI
+  resetGame(spaceship, scene);
+  scoreEl.innerText = "Score: 0";
+  scoreEl.style.opacity = 1;
+  
+  gameState = "playing";
 }
 
 function onWindowResize() {
@@ -94,13 +118,24 @@ function animate() {
   requestAnimationFrame(animate);
 
   // Move stars to simulate forward motion
-  stars.position.z += 5;
+  stars.position.z += 2; // Slower star speed
   if (stars.position.z > 1000) stars.position.z = 0;
 
-  // Rotate spaceship slowly
-  if (spaceship) {
-    spaceship.rotation.y += 0.01;
-    spaceship.position.y = -1 + Math.sin(Date.now() * 0.002) * 0.2; // hover effect
+  if (gameState === "menu" && spaceship) {
+    // Menu animation: rotate and hover
+    spaceship.rotation.y += 0.005;
+    spaceship.position.y = -2 + Math.sin(Date.now() * 0.001) * 0.2;
+  }
+  
+  if (gameState === "playing") {
+    // Delegate updates to the game module
+    const isGameOver = updateGame();
+    if (isGameOver) {
+      gameState = "gameover";
+      // Show game over screen
+      gameOverEl.classList.remove("hidden");
+      scoreEl.style.opacity = 0; // Hide score
+    }
   }
 
   composer.render();

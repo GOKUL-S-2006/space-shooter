@@ -2,11 +2,23 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Space Shooter - Home</title>
+  <title>Space Shooter</title>
   <link rel="stylesheet" href="/src/home.css">
 </head>
 <body>
+
+  <div id="ui-container">
+    <div id="score">Score: 0</div>
+    <div id="lives">❤️❤️❤️</div>
+    
+    <div id="gameOver" class="hidden">
+      <h1>GAME OVER</h1>
+      <button id="restartBtn">Restart</button>
+    </div>
+  </div>
+
   <button id="startBtn">Start Game</button>
+  
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

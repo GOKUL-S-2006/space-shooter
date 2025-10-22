@@ -19,18 +19,27 @@ export function loadSpaceship(scene, camera, onLoad) {
       const center = new THREE.Vector3();
       box.getCenter(center);
 
-      // Move ship to center
+      // Center and scale ship
       ship.position.sub(center);
-
-      // Scale it to a consistent size
       const maxDim = Math.max(size.x, size.y, size.z);
-      const scaleFactor = 5 / maxDim; // make it roughly size 5
+      const scaleFactor = 5 / maxDim; // consistent visible size
       ship.scale.setScalar(scaleFactor);
 
-      // Move ship in front of camera
-      ship.position.z = -20;
+      // Move ship closer to the camera
+      ship.position.z = -15;
+      ship.position.y = -2; // slightly below center view
+
+      // Enable shadows
+      ship.traverse((child) => {
+        if (child.isMesh) {
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
 
       scene.add(ship);
+
+      // Pass the ship to main game logic
       onLoad?.(ship);
     },
     (xhr) => {

@@ -1,22 +1,82 @@
+body {
+  margin: 0;
+  overflow: hidden; /* Prevent scrollbars */
+  background-color: #000;
+  color: white;
+  font-family: 'Arial', sans-serif;
+}
+
+canvas {
+  display: block;
+}
+
+/* Start Button */
 #startBtn {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  padding: 15px 40px;
-  font-size: 28px;
-  font-weight: bold;
-  cursor: pointer;
-  background: linear-gradient(135deg, #1e90ff, #00bfff);
-  color: white;
+  font-size: 2rem;
+  padding: 1rem 2rem;
+  background-color: #007bff;
   border: none;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
-  transition: transform 0.2s ease, background 0.3s ease;
-  z-index: 10;
+  color: white;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
 
 #startBtn:hover {
-  transform: translate(-50%, -50%) scale(1.1);
-  background: linear-gradient(135deg, #3399ff, #1e90ff);
+  background-color: #0056b3;
+}
+
+/* In-Game UI */
+#ui-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none; /* Allows clicking through */
+}
+
+#score {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  font-size: 1.5rem;
+  opacity: 0; /* Hidden by default */
+  transition: opacity 0.5s ease;
+}
+
+#gameOver {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 2rem;
+  border-radius: 10px;
+  pointer-events: all; /* Allow clicking the restart button */
+}
+
+#restartBtn {
+  font-size: 1.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #28a745;
+  border: none;
+  color: white;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+#restartBtn:hover {
+  background-color: #218838;
+}
+
+/* Utility class */
+.hidden {
+  display: none !important;
+  opacity: 0 !important;
 }
