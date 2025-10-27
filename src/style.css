@@ -1,0 +1,34 @@
+/* Add this to your main CSS file and link it in your index.html
+  e.g., <link rel="stylesheet" href="style.css">
+*/
+
+body {
+  margin: 0;
+  overflow: hidden; /* Prevent scrollbars */
+}
+
+/* This is the 3D-style scoreboard you wanted */
+#score {
+  position: absolute;
+  /* Position it below where the 3D hearts will be.
+    You may need to adjust 'top' and 'left' to match your layout.
+  */
+  top: 45px; 
+  left: 20px;
+  
+  font-family: 'Arial', 'Helvetica', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  color: #ffffff; /* Main text color */
+  
+  /* This creates the "3D" / chiseled effect */
+  text-shadow: 
+    -1px -1px 0px rgba(255, 255, 255, 0.3), /* Top-left highlight */
+     1px  1px 0px rgba(0, 0, 0, 0.8),     /* Bottom-right shadow */
+     2px  2px 3px rgba(0, 0, 0, 0.5);     /* Drop shadow */
+}
+
+/* You should also remove your old HTML-based hearts.
+  If you had an element like <div id="hearts">❤️❤️❤️</div>, 
+  you can now delete it from your index.html.
+*/

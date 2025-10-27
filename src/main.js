@@ -2,11 +2,13 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"; 
 import { gsap } from "gsap";
 import { loadSpaceship } from "./loadSpaceship.js";
 import { startGame, updateGame, resetGame } from "./game.js";
+import { initObstacles } from './obstacles.js';
 
-let scene, camera, renderer, composer, stars, spaceship;
+let scene, camera, renderer, composer, stars, spaceship, earthModel; 
 let gameState = "menu"; // 'menu', 'playing', 'gameover'
 
 // UI Elements
@@ -19,7 +21,6 @@ function init() {
   // === SCENE ===
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
-
   // === CAMERA ===
   camera = new THREE.PerspectiveCamera(
     75,
@@ -30,9 +31,10 @@ function init() {
   camera.position.set(0, 0, 10); // Start camera at menu position
 
   // === RENDERER ===
-  renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('game-canvas') }); 
   renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+
+  initObstacles();
 
   // === POSTPROCESSING ===
   composer = new EffectComposer(renderer);
@@ -70,10 +72,32 @@ function init() {
   scene.add(stars);
 
   // === LOAD SPACESHIP ===
-  // Load the ship immediately for the menu
   loadSpaceship(scene, camera, (ship) => {
     spaceship = ship;
   });
+
+  // === LOAD EARTH === //
+  const loader = new GLTFLoader();
+  loader.load(
+    '/models/earth.glb', // This path is now correct because it's in /public
+    function (gltf) {
+      earthModel = gltf.scene;
+
+      // Position it on the left side, slightly down, and back
+      earthModel.position.set(8, -2, -5); // Using your last position
+      //earthModel.position.set(7, -1.5, -4);
+
+
+      // Scale it up so it looks like a planet
+      earthModel.scale.set(2.5, 2.5, 2.5); 
+      scene.add(earthModel);
+      console.log("🌍 Earth loaded!");
+    },
+    undefined, 
+    function (error) {
+      console.error('An error happened while loading the earth:', error);
+    }
+  );
 
   // === EVENT LISTENERS ===
   startBtn.addEventListener("click", onStartClick);
@@ -88,6 +112,12 @@ function onStartClick() {
   // Hide button
   gsap.to(startBtn, { opacity: 0, scale: 0.5, duration: 1, onComplete: () => startBtn.classList.add('hidden') });
 
+  // <--- NEW: Animate the Earth disappearing
+  if (earthModel) {
+    // We scale it to a tiny number (not 0) to avoid issues
+    gsap.to(earthModel.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 1 });
+  }
+
   // Show score
   scoreEl.style.opacity = 1;
 
@@ -97,7 +127,7 @@ function onStartClick() {
 
 function onRestartClick() {
   console.log("🔄 Restarting game...");
-  gameOverEl.classList.add("hidden");
+  gameOverEl.classList.add("hidden"); 
   
   // Reset game state and UI
   resetGame(spaceship, scene);
@@ -105,6 +135,11 @@ function onRestartClick() {
   scoreEl.style.opacity = 1;
   
   gameState = "playing";
+
+  // <--- NEW: Make sure Earth stays hidden on restart
+  if (earthModel) {
+    earthModel.scale.set(0.01, 0.01, 0.01);
+  }
 }
 
 function onWindowResize() {
@@ -117,14 +152,21 @@ function onWindowResize() {
 function animate() {
   requestAnimationFrame(animate);
 
+  // <--- MODIFIED: Only rotate the earth if we are in the menu
+  if (earthModel && gameState === "menu") {
+    earthModel.rotation.y += 0.001; // Adjust speed as you like
+  }
+
   // Move stars to simulate forward motion
-  stars.position.z += 2; // Slower star speed
+  stars.position.z += 2; 
   if (stars.position.z > 1000) stars.position.z = 0;
 
   if (gameState === "menu" && spaceship) {
     // Menu animation: rotate and hover
     spaceship.rotation.y += 0.005;
     spaceship.position.y = -2 + Math.sin(Date.now() * 0.001) * 0.2;
+    spaceship.position.x = 0; // Keep it centered
+    spaceship.position.z = 0; // Keep it at the origin
   }
   
   if (gameState === "playing") {
@@ -133,7 +175,7 @@ function animate() {
     if (isGameOver) {
       gameState = "gameover";
       // Show game over screen
-      gameOverEl.classList.remove("hidden");
+      gameOverEl.classList.remove("hidden"); 
       scoreEl.style.opacity = 0; // Hide score
     }
   }

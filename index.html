@@ -3,19 +3,26 @@
 <head>
   <meta charset="UTF-8">
   <title>Space Shooter</title>
-  <link rel="stylesheet" href="/src/home.css">
+  <link rel="stylesheet" href="/src/home.css"> <!-- This will load the new styles -->
+  <link rel="stylesheet" href="/src/style.css">
+  <!-- 
+    Added the new style.css file to apply the 3D scoreboard effect.
+  -->
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div id="ui-container">
     <div id="score">Score: 0</div>
-    <div id="lives">❤️❤️❤️</div>
-    
+    <div id="hit-message"></div> <canvas id="game-canvas"></canvas>
     <div id="gameOver" class="hidden">
       <h1>GAME OVER</h1>
       <button id="restartBtn">Restart</button>
     </div>
   </div>
+
+  <!-- This is the new title we discussed -->
+  <h1 id="menu-title">SPACE SHOOTER</h1>
 
   <button id="startBtn">Start Game</button>
   
