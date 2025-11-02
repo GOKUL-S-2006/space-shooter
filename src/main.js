@@ -2,16 +2,17 @@ import * as THREE from "three";
 import { EffectComposer } from "three/examples/jsm/postprocessing/EffectComposer.js";
 import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"; 
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { gsap } from "gsap";
 import { loadSpaceship } from "./loadSpaceship.js";
 import { startGame, updateGame, resetGame } from "./game.js";
-import { initObstacles } from './obstacles.js';
+import { initObstacles } from "./obstacles.js";
 
-let scene, camera, renderer, composer, stars, spaceship, earthModel; 
-let gameState = "menu"; // 'menu', 'playing', 'gameover'
+let scene, camera, renderer, composer, stars, spaceship, earthModel;
+let gameState = "menu";
+let menuMusic;
 
-// UI Elements
+// --- UI Elements ---
 const startBtn = document.getElementById("startBtn");
 const scoreEl = document.getElementById("score");
 const gameOverEl = document.getElementById("gameOver");
@@ -21,6 +22,7 @@ function init() {
   // === SCENE ===
   scene = new THREE.Scene();
   scene.background = new THREE.Color(0x000000);
+
   // === CAMERA ===
   camera = new THREE.PerspectiveCamera(
     75,
@@ -28,10 +30,13 @@ function init() {
     0.1,
     5000
   );
-  camera.position.set(0, 0, 10); // Start camera at menu position
+  camera.position.set(0, 0, 10);
 
   // === RENDERER ===
-  renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('game-canvas') }); 
+  renderer = new THREE.WebGLRenderer({
+    antialias: true,
+    canvas: document.getElementById("game-canvas"),
+  });
   renderer.setSize(window.innerWidth, window.innerHeight);
 
   initObstacles();
@@ -41,15 +46,14 @@ function init() {
   composer.addPass(new RenderPass(scene, camera));
   const bloomPass = new UnrealBloomPass(
     new THREE.Vector2(window.innerWidth, window.innerHeight),
-    1.2, // strength
-    0.4, // radius
-    0.85 // threshold
+    1.2,
+    0.4,
+    0.85
   );
   composer.addPass(bloomPass);
 
-  // === LIGHTING ===
-  const ambient = new THREE.AmbientLight(0xffffff, 1);
-  scene.add(ambient);
+  // === LIGHTS ===
+  scene.add(new THREE.AmbientLight(0xffffff, 1));
   const dirLight = new THREE.DirectionalLight(0xffffff, 2);
   dirLight.position.set(5, 10, 7.5);
   scene.add(dirLight);
@@ -63,10 +67,7 @@ function init() {
     positions.push((Math.random() - 0.5) * 2000);
     positions.push(Math.random() * -2000);
   }
-  starGeo.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute(positions, 3)
-  );
+  starGeo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
   const starMat = new THREE.PointsMaterial({ color: 0xffffff, size: 1 });
   stars = new THREE.Points(starGeo, starMat);
   scene.add(stars);
@@ -76,30 +77,31 @@ function init() {
     spaceship = ship;
   });
 
-  // === LOAD EARTH === //
+  // === LOAD EARTH ===
   const loader = new GLTFLoader();
   loader.load(
-    '/models/earth.glb', // This path is now correct because it's in /public
+    "/models/earth.glb",
     function (gltf) {
       earthModel = gltf.scene;
-
-      // Position it on the left side, slightly down, and back
-      earthModel.position.set(8, -2, -5); // Using your last position
-      //earthModel.position.set(7, -1.5, -4);
-
-
-      // Scale it up so it looks like a planet
-      earthModel.scale.set(2.5, 2.5, 2.5); 
+      earthModel.position.set(8, -2, -5);
+      earthModel.scale.set(2.5, 2.5, 2.5);
       scene.add(earthModel);
       console.log("🌍 Earth loaded!");
     },
-    undefined, 
+    undefined,
     function (error) {
-      console.error('An error happened while loading the earth:', error);
+      console.error("An error happened while loading the earth:", error);
     }
   );
 
-  // === EVENT LISTENERS ===
+  // === LOAD MENU MUSIC ===
+  menuMusic = new Audio("/models/interstellar_theme.mp3");
+  menuMusic.loop = true;
+  menuMusic.volume = 0.6;
+
+  console.log("🎵 Menu music initialized but not playing yet.");
+
+  // === BUTTON EVENTS ===
   startBtn.addEventListener("click", onStartClick);
   restartBtn.addEventListener("click", onRestartClick);
   window.addEventListener("resize", onWindowResize);
@@ -107,36 +109,56 @@ function init() {
 
 function onStartClick() {
   console.log("🎬 Start button clicked!");
+
+  // Try playing music when clicked if not already
+  if (menuMusic && menuMusic.paused) {
+    menuMusic.play().then(() => {
+      console.log("🎶 Interstellar theme playing successfully!");
+    }).catch(err => {
+      console.warn("⚠️ Audio play blocked or failed:", err);
+    });
+  }
+
   gameState = "playing";
 
-  // Hide button
-  gsap.to(startBtn, { opacity: 0, scale: 0.5, duration: 1, onComplete: () => startBtn.classList.add('hidden') });
+  // Fade out the menu music
+  if (menuMusic && !menuMusic.paused) {
+    gsap.to(menuMusic, {
+      volume: 0,
+      duration: 2,
+      onComplete: () => {
+        menuMusic.pause();
+        menuMusic.currentTime = 0;
+        console.log("🎧 Menu music stopped.");
+      },
+    });
+  }
 
-  // <--- NEW: Animate the Earth disappearing
+  // Hide Start Button
+  gsap.to(startBtn, {
+    opacity: 0,
+    scale: 0.5,
+    duration: 1,
+    onComplete: () => startBtn.classList.add("hidden"),
+  });
+
+  // Hide Earth
   if (earthModel) {
-    // We scale it to a tiny number (not 0) to avoid issues
     gsap.to(earthModel.scale, { x: 0.01, y: 0.01, z: 0.01, duration: 1 });
   }
 
-  // Show score
   scoreEl.style.opacity = 1;
-
-  // Start the game logic
   startGame(spaceship, scene, camera);
 }
 
 function onRestartClick() {
   console.log("🔄 Restarting game...");
-  gameOverEl.classList.add("hidden"); 
-  
-  // Reset game state and UI
+  gameOverEl.classList.add("hidden");
   resetGame(spaceship, scene);
   scoreEl.innerText = "Score: 0";
   scoreEl.style.opacity = 1;
-  
   gameState = "playing";
 
-  // <--- NEW: Make sure Earth stays hidden on restart
   if (earthModel) {
     earthModel.scale.set(0.01, 0.01, 0.01);
   }
@@ -152,31 +174,28 @@ function onWindowResize() {
 function animate() {
   requestAnimationFrame(animate);
 
-  // <--- MODIFIED: Only rotate the earth if we are in the menu
+  // Rotate Earth only in menu
   if (earthModel && gameState === "menu") {
-    earthModel.rotation.y += 0.001; // Adjust speed as you like
+    earthModel.rotation.y += 0.001;
   }
 
-  // Move stars to simulate forward motion
-  stars.position.z += 2; 
+  // Move stars
+  stars.position.z += 2;
   if (stars.position.z > 1000) stars.position.z = 0;
 
+  // Menu spaceship hover
   if (gameState === "menu" && spaceship) {
-    // Menu animation: rotate and hover
     spaceship.rotation.y += 0.005;
     spaceship.position.y = -2 + Math.sin(Date.now() * 0.001) * 0.2;
-    spaceship.position.x = 0; // Keep it centered
-    spaceship.position.z = 0; // Keep it at the origin
   }
-  
+
+  // Playing state
   if (gameState === "playing") {
-    // Delegate updates to the game module
     const isGameOver = updateGame();
     if (isGameOver) {
       gameState = "gameover";
-      // Show game over screen
-      gameOverEl.classList.remove("hidden"); 
-      scoreEl.style.opacity = 0; // Hide score
+      gameOverEl.classList.remove("hidden");
+      scoreEl.style.opacity = 0;
     }
   }
 
@@ -184,4 +203,14 @@ function animate() {
 }
 
 init();
+console.log("🎵 Testing audio from /sound_effects...");
+
+document.body.addEventListener("click", () => {
+  const testSound = new Audio("/sound_effects/interstellar_theme.mp3");
+  testSound.loop = true;
+  testSound.play()
+    .then(() => console.log("✅ Interstellar theme playing!"))
+    .catch(err => console.error("⚠️ Audio play error:", err));
+});
+
 animate();

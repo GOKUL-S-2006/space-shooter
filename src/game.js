@@ -5,6 +5,7 @@ import { setupShooting, updateBullets } from './shooting.js';
 import { spawnObstacle, updateObstacles } from './obstacles.js';
 import { initHearts, updateHealthUI } from './ui.js';
 
+// ---------- VARIABLES ----------
 let ship;
 let sceneRef;
 let bullets = [];
@@ -17,6 +18,16 @@ let hitMessageEl;
 let obstacleInterval;
 let isGameOver = false;
 
+// ---------- SOUND EFFECTS ----------
+// 🟢 FIXED PATHS: remove "public/" prefix
+const shootSound = new Audio('/sound_effects/shooting.wav');
+const gameOverSound = new Audio('/sound_effects/game-over.wav');
+
+// Optional: adjust volume
+shootSound.volume = 0.4;
+gameOverSound.volume = 0.6;
+
+// ---------- GAME LOGIC ----------
 export function startGame(spaceship, scene, camera) {
   ship = spaceship;
   sceneRef = scene;
@@ -27,6 +38,7 @@ export function startGame(spaceship, scene, camera) {
   score = 0;
   updateScoreUI();
 
+  // Hide hit message safely
   if (hitMessageEl) {
     gsap.to(hitMessageEl, { opacity: 0, duration: 0.2, visibility: 'hidden' });
   }
@@ -51,7 +63,11 @@ export function startGame(spaceship, scene, camera) {
   });
 
   initControls(ship);
-  setupShooting(scene, ship, bullets);
+
+  // Shooting system + sound
+  setupShooting(scene, ship, bullets, () => {
+    playShootSound();
+  });
 
   obstacleInterval = setInterval(() => {
     if (!isGameOver) {
@@ -69,7 +85,6 @@ export function updateGame() {
     updateScoreUI();
   });
 
-  // Normal obstacle collision/health system
   const isPlayerHit = updateObstacles(obstacles, sceneRef, ship);
   if (isPlayerHit) {
     health--;
@@ -104,23 +119,23 @@ export function resetGame(spaceship, scene) {
   obstacles.length = 0;
   clearInterval(obstacleInterval);
 
-  // Reset ship position
-  const camera = scene.getObjectByName('PerspectiveCamera');
-  startGame(ship, sceneRef, camera || ship.parent.children.find((c) => c.isPerspectiveCamera));
+  const camera =
+    scene.getObjectByName('PerspectiveCamera') ||
+    ship.parent.children.find((c) => c.isPerspectiveCamera);
+
+  startGame(ship, sceneRef, camera);
 }
 
-// --- Internal Helper Functions ---
-
+// ---------- HELPER FUNCTIONS ----------
 function updateScoreUI() {
-  scoreEl.innerText = `Score: ${score}`;
+  if (scoreEl) scoreEl.innerText = `Score: ${score}`;
 }
 
 function showHitMessage() {
-  if (health > 1) {
-    hitMessageEl.innerText = `${health} HITS REMAINING`;
-  } else {
-    hitMessageEl.innerText = `1 HIT REMAINING!`;
-  }
+  if (!hitMessageEl) return;
+
+  hitMessageEl.innerText =
+    health > 1 ? `${health} HITS REMAINING` : `1 HIT REMAINING!`;
 
   gsap.fromTo(
     hitMessageEl,
@@ -145,8 +160,22 @@ function showHitMessage() {
     }
   );
 }
-
 function endGame() {
   isGameOver = true;
   clearInterval(obstacleInterval);
+  console.log('💀 Game Over triggered, playing sound');
+  playGameOverSound();
+}
+
+
+// ---------- SOUND PLAYERS ----------
+function playShootSound() {
+  const s = shootSound.cloneNode(); // allows overlapping fire
+  s.volume = shootSound.volume;
+  s.play().catch((err) => console.warn('Audio play blocked:', err));
+}
+
+function playGameOverSound() {
+  gameOverSound.currentTime = 0;
+  gameOverSound.play().catch((err) => console.warn('Audio play blocked:', err));
 }

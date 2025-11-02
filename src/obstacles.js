@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // --- ASTEROID SETUP ---
 const textureLoader = new THREE.TextureLoader();
@@ -29,85 +28,29 @@ for (let i = 0; i < positions.length; i += 3) {
 asteroidGeo.computeVertexNormals();
 
 
-// --- Load Enemy Ship Model (From your project) ---
-const gltfLoader = new GLTFLoader();
-let enemyShipModel = null;
-const enemyShipMaterial = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
-    emissive: 0xcc0000, // Make it glow red
-    emissiveIntensity: 3
-});
-
-/**
- * Loads the enemy ship model. Called by main.js
- */
-export function initObstacles() {
-  console.log("Loading enemy ship model (Spaceship CB1)...");
-  // This path is still correct since we re-used the folder
-  gltfLoader.load(
-    '/models/dropship/scene.gltf', 
-    (gltf) => {
-      enemyShipModel = gltf.scene;
-      // Apply our glowing red material to the new model
-      enemyShipModel.traverse((child) => {
-        if (child.isMesh) {
-          child.material = enemyShipMaterial;
-        }
-      });
-      console.log("✅ Enemy ship model (Spaceship CB1) loaded!");
-    },
-    undefined,
-    (error) => {
-      console.error("Failed to load enemy ship model", error);
-    }
-  );
-}
-
-
-// --- Spawn Area (Unchanged) ---
+// --- Spawn Area ---
 const spawnArea = {
   x: 12,
   y: 5,
   z: -100
 };
 
+// Initialize obstacles (for compatibility)
+export function initObstacles() {
+  console.log("✅ Obstacles (asteroids only) initialized.");
+}
+
 /**
- * Spawns a new obstacle at a random position.
+ * Spawns a new asteroid obstacle at a random position.
  */
 export function spawnObstacle(scene, obstaclesArray, score) {
-  
-  let obstacleMesh;
+  const obstacleMesh = new THREE.Mesh(asteroidGeo, asteroidMat);
+  obstacleMesh.rotation.set(
+    Math.random() * Math.PI,
+    Math.random() * Math.PI,
+    Math.random() * Math.PI
+  );
 
-  if (score < 100) {
-    // --- STAGE 1: Spawn ASTEROID ---
-    obstacleMesh = new THREE.Mesh(asteroidGeo, asteroidMat);
-    obstacleMesh.rotation.set(
-      Math.random() * Math.PI,
-      Math.random() * Math.PI,
-      Math.random() * Math.PI
-    );
-
-  } else {
-    // --- STAGE 2: Spawn LOADED ENEMY SHIP ---
-    if (enemyShipModel) {
-      obstacleMesh = enemyShipModel.clone();
-      // --- MODIFIED: Guessed new scale and rotation for THIS model ---
-      // This model looks like it's Y-up and facing forward
-      // You may need to tweak these values!
-      obstacleMesh.scale.set(0.5, 0.5, 0.5); 
-      obstacleMesh.rotation.set(0, Math.PI, 0); // Rotate 180deg to face player
-    } else {
-      // Fallback: If model not loaded, just spawn another asteroid
-      obstacleMesh = new THREE.Mesh(asteroidGeo, asteroidMat);
-      obstacleMesh.rotation.set(
-        Math.random() * Math.PI,
-        Math.random() * Math.PI,
-        Math.random() * Math.PI
-      );
-    }
-  }
-
-  // Set random position (works for both)
   obstacleMesh.position.x = (Math.random() - 0.5) * 2 * spawnArea.x;
   obstacleMesh.position.y = (Math.random() - 0.5) * 2 * spawnArea.y;
   obstacleMesh.position.z = spawnArea.z;
@@ -124,7 +67,7 @@ export function spawnObstacle(scene, obstaclesArray, score) {
 }
 
 /**
- * Updates all active obstacles. (This function is unchanged)
+ * Updates all active obstacles.
  */
 export function updateObstacles(obstacles, scene, ship) {
   const obstacleSpeed = 0.3;

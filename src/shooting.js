@@ -1,30 +1,33 @@
-// shooting.js
 import * as THREE from 'three';
-
 let sceneRef, shipRef, bulletsRef;
 let canShoot = true;
 const shootCooldown = 200; // milliseconds
 
 const bulletGeo = new THREE.BoxGeometry(0.2, 0.2, 1.5);
-const bulletMat = new THREE.MeshBasicMaterial({ 
+const bulletMat = new THREE.MeshBasicMaterial({
   color: 0x00ff00,
   emissive: 0x00ff00,
   emissiveIntensity: 10
 });
+
+// --- New: a callback for playing the shoot sound ---
+let onShootSound = null;
 
 /**
  * Sets up the shooting mechanic.
  * @param {THREE.Scene} scene - The main scene.
  * @param {THREE.Object3D} ship - The player's ship.
  * @param {Array} bulletsArray - The array to store active bullets.
+ * @param {Function} [shootSoundCallback] - Optional sound function called when shooting.
  */
-export function setupShooting(scene, ship, bulletsArray) {
+export function setupShooting(scene, ship, bulletsArray, shootSoundCallback) {
   sceneRef = scene;
   shipRef = ship;
   bulletsRef = bulletsArray;
+  onShootSound = shootSoundCallback || null; // store callback
 
-  window.addEventListener("keydown", (e) => {
-    if (e.key === " " && canShoot) { // Spacebar
+  window.addEventListener('keydown', (e) => {
+    if (e.key === ' ' && canShoot) { // Spacebar
       shoot();
       canShoot = false;
       setTimeout(() => { canShoot = true; }, shootCooldown);
@@ -34,7 +37,7 @@ export function setupShooting(scene, ship, bulletsArray) {
 
 function shoot() {
   const bullet = new THREE.Mesh(bulletGeo, bulletMat);
-  
+
   // Set bullet initial position to the ship's position
   bullet.position.copy(shipRef.position);
   bullet.position.z -= 2; // Start slightly in front of the ship
@@ -42,23 +45,26 @@ function shoot() {
   // Add to scene and array
   sceneRef.add(bullet);
   bulletsRef.push(bullet);
+
+  // 🔊 Play shooting sound if callback exists
+  if (onShootSound) onShootSound();
 }
 
 /**
  * Updates all active bullets.
  * @param {Array} bullets - The array of active bullets.
- *T* @param {Array} obstacles - The array of active obstacles.
+ * @param {Array} obstacles - The array of active obstacles.
  * @param {THREE.Scene} scene - The main scene.
  * @param {Function} onHitCallback - Function to call when an obstacle is hit.
  */
 export function updateBullets(bullets, obstacles, scene, onHitCallback) {
   const bulletSpeed = 1.0;
-  
+
   for (let i = bullets.length - 1; i >= 0; i--) {
     const bullet = bullets[i];
     bullet.position.z -= bulletSpeed;
 
-    // 1. Check for off-screen
+    // 1. Remove off-screen bullets
     if (bullet.position.z < -100) {
       scene.remove(bullet);
       bullets.splice(i, 1);
@@ -68,21 +74,19 @@ export function updateBullets(bullets, obstacles, scene, onHitCallback) {
     // 2. Check for collision with obstacles
     for (let j = obstacles.length - 1; j >= 0; j--) {
       const obstacle = obstacles[j];
-      
-      // Simple AABB collision detection
       const bulletBox = new THREE.Box3().setFromObject(bullet);
-      const obstacleBox = obstacle.bbox; // Use pre-calculated bbox
-      
+      const obstacleBox = obstacle.bbox;
+
       if (bulletBox.intersectsBox(obstacleBox)) {
-        // HIT!
+        // 💥 HIT
         scene.remove(bullet);
         bullets.splice(i, 1);
-        
+
         scene.remove(obstacle.mesh);
         obstacles.splice(j, 1);
-        
-        onHitCallback(); // Call to update score
-        break; // Stop checking this bullet
+
+        onHitCallback(); // update score
+        break;
       }
     }
   }
